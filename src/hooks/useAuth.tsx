@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { supabase, supabaseUrl } from '../lib/supabase';
 import { Profile, Recurso, Acao } from '../types';
 
 interface AuthContextType {
@@ -60,8 +60,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error?.message ?? null };
+    try {
+      const response = await fetch(`${supabaseUrl}/functions/v1/auth-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        return { error: data.error ?? 'Erro ao fazer login' };
+      }
+      if (data.session) {
+        const { error } = await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        });
+        if (error) {
+          return { error: error.message };
+        }
+      }
+      return { error: null };
+    } catch {
+      return { error: 'Erro de conexao com o servidor' };
+    }
   };
 
   const signUp = async (email: string, password: string, nome: string, permissao: string) => {

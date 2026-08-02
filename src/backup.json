@@ -1,0 +1,122 @@
+{
+  "version": "1.0",
+  "created_at": "2026-08-02T00:46:28.789Z",
+  "data": {
+    "clientes": [
+      {
+        "id": "699d1b8a-1cf6-4474-964a-bb9155f25c4d",
+        "nome": "Diogo Pereira Gobatto",
+        "cpf_cnpj": "00161759130",
+        "telefone": "4434281455",
+        "celular": "95991101972",
+        "email": "diogo@suporteanalista.com",
+        "endereco": "Rodovia Heitor de Alencar Furtado, SN - Sítio São Marcos - Graciosa",
+        "bairro": "",
+        "cidade": "Paranavaí",
+        "estado": "PR",
+        "cep": "",
+        "observacoes": "",
+        "criado_em": "2026-08-02T00:20:50.904+00:00",
+        "atualizado_em": "2026-08-02T00:20:50.904+00:00"
+      }
+    ],
+    "equipamentos": [
+      {
+        "id": "c3cd34a6-db38-45db-b0ac-fe515b6909f8",
+        "cliente_id": "699d1b8a-1cf6-4474-964a-bb9155f25c4d",
+        "tipo": "ar-condicionado",
+        "marca": "Gree",
+        "modelo": "Inverter",
+        "numero_serie": "xxxxxxxxxxxxxxxxx",
+        "imei": "xxxxxxxxxxxxxx",
+        "cor": "branco",
+        "condicao_entrada": "novo",
+        "acessorios": "sim",
+        "observacoes": "sim",
+        "criado_em": "2026-08-02T00:21:54.808+00:00"
+      }
+    ],
+    "tecnicos": [
+      {
+        "id": "820d455e-7ed5-4f50-9f36-53820610ff89",
+        "nome": "Eduardo Ferreira",
+        "especialidade": "Ar-Condicionado",
+        "telefone": "44 9834-2393",
+        "email": "eduardo@fferreiramanutencoes.com.br",
+        "ativo": true,
+        "criado_em": "2026-08-02T00:27:05.962+00:00"
+      }
+    ],
+    "produtos": [
+      {
+        "id": "e9ae252f-525a-4804-b50c-64a8da7b5bef",
+        "nome": "Caixa do Dijuntor do Ar Condicionado Gree",
+        "descricao": "Escrever",
+        "codigo": "1",
+        "quantidade_estoque": 1,
+        "preco_custo": 12,
+        "preco_venda": 35.9,
+        "categoria": "PÇ",
+        "criado_em": "2026-08-02T00:29:00.128+00:00",
+        "atualizado_em": "2026-08-02T00:29:00.128+00:00"
+      }
+    ],
+    "ordens_servico": [
+      {
+        "id": "5d67f563-c2d1-4db5-b8c4-bdde0220a35e",
+        "numero_os": 1001,
+        "cliente_id": "699d1b8a-1cf6-4474-964a-bb9155f25c4d",
+        "equipamento_id": "c3cd34a6-db38-45db-b0ac-fe515b6909f8",
+        "tecnico_id": "820d455e-7ed5-4f50-9f36-53820610ff89",
+        "status": "aberta",
+        "prioridade": "normal",
+        "defeito_relatado": "Escrever",
+        "laudo_tecnico": "Escrever",
+        "servico_executado": "Escrever",
+        "data_entrada": "2026-08-02T00:29:07.56+00:00",
+        "data_previsao": "2026-09-01T00:00:00+00:00",
+        "data_conclusao": null,
+        "valor_servico": 0,
+        "valor_total": 35.9,
+        "observacoes": "escrever",
+        "criado_por": "703d1533-dcb3-413c-816a-8bdaf570d429",
+        "criado_em": "2026-08-02T00:29:07.56+00:00",
+        "atualizado_em": "2026-08-02T00:29:07.56+00:00",
+        "data_revisao_futura": null
+      }
+    ],
+    "os_produtos": [
+      {
+        "id": "550e91a6-e732-4fbc-bc19-69f6b643e85d",
+        "ordem_servico_id": "5d67f563-c2d1-4db5-b8c4-bdde0220a35e",
+        "produto_id": "e9ae252f-525a-4804-b50c-64a8da7b5bef",
+        "quantidade": 1,
+        "preco_unitario": 35.9,
+        "preco_total": 35.9
+      }
+    ],
+    "configuracoes": [
+      {
+        "id": "5b0f7faf-016e-4fd5-a68f-8131b44b7d23",
+        "nome_empresa": "Minha Empresa",
+        "logo_url": "",
+        "telefone": "(00) 0000-0000",
+        "endereco": "Endereco da empresa",
+        "criado_em": "2026-08-01T23:03:03.658252+00:00",
+        "atualizado_em": "2026-08-01T23:03:03.658252+00:00",
+        "cnpj": "",
+        "razao_social": "",
+        "email": "",
+        "celular": "",
+        "bairro": "",
+        "cidade": "",
+        "estado": "",
+        "cep": "",
+        "inscricao_estadual": "",
+        "inscricao_municipal": "",
+        "responsavel": "",
+        "site": ""
+      }
+    ]
+  }
+}

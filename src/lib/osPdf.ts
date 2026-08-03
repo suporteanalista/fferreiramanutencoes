@@ -34,6 +34,40 @@ function formatDate(d: string | null): string {
   return new Date(d).toLocaleDateString('pt-BR');
 }
 
+interface ClassifiedItems {
+  produtos: { nome: string; quantidade: number; preco_unitario: number; preco_total: number }[];
+  servicos: { nome: string; quantidade: number; preco_unitario: number; preco_total: number }[];
+  totalProdutos: number;
+  totalServicos: number;
+  totalGeral: number;
+}
+
+function classifyItems(os: OrdemServico): ClassifiedItems {
+  const produtos: ClassifiedItems['produtos'] = [];
+  const servicos: ClassifiedItems['servicos'] = [];
+
+  (os.os_produtos || []).forEach(p => {
+    const prod = p.produto as any;
+    const nome = prod?.nome || '-';
+    const isServico = prod?.tipo_item === 'servico';
+    if (isServico) {
+      servicos.push({ nome, quantidade: p.quantidade, preco_unitario: p.preco_unitario, preco_total: p.preco_total });
+    } else {
+      produtos.push({ nome, quantidade: p.quantidade, preco_unitario: p.preco_unitario, preco_total: p.preco_total });
+    }
+  });
+
+  (os.os_servicos || []).forEach(s => {
+    servicos.push({ nome: s.descricao || '-', quantidade: s.quantidade, preco_unitario: s.preco_unitario, preco_total: s.preco_total });
+  });
+
+  const totalProdutos = produtos.reduce((sum, p) => sum + (p.preco_total || 0), 0);
+  const totalServicos = servicos.reduce((sum, s) => sum + (s.preco_total || 0), 0);
+  const totalGeral = totalProdutos + totalServicos;
+
+  return { produtos, servicos, totalProdutos, totalServicos, totalGeral };
+}
+
 export async function generateOSPdf(os: OrdemServico, config: Partial<Configuracao> | null) {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -51,20 +85,20 @@ export async function generateOSPdf(os: OrdemServico, config: Partial<Configurac
 
   const textX = logo ? margin + 28 : margin;
 
-  doc.setFontSize(14);
+  doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...NAVY);
   doc.text(config?.nome_empresa || 'FF Manutencoes', textX, y + 8);
 
-  doc.setFontSize(8);
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...GRAY_TEXT);
 
-  let infoY = y + 13;
+  let infoY = y + 14;
   if (config?.endereco) {
     const addr = [config.endereco, config.bairro, config.cidade, config.estado].filter(Boolean).join(', ');
     doc.text(addr, textX, infoY);
-    infoY += 4;
+    infoY += 5;
   }
   const contacts = [
     config?.telefone ? `Tel: ${config.telefone}` : '',
@@ -73,32 +107,32 @@ export async function generateOSPdf(os: OrdemServico, config: Partial<Configurac
   ].filter(Boolean).join(' | ');
   if (contacts) {
     doc.text(contacts, textX, infoY);
-    infoY += 4;
+    infoY += 5;
   }
   if (config?.cnpj) {
     doc.text(`CNPJ: ${config.cnpj}`, textX, infoY);
   }
 
   // OS number badge (right side)
-  const badgeW = 48;
-  const badgeH = 22;
+  const badgeW = 52;
+  const badgeH = 24;
   const badgeX = pageWidth - margin - badgeW;
   doc.setFillColor(...NAVY);
   doc.roundedRect(badgeX, y, badgeW, badgeH, 2, 2, 'F');
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(8);
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text('ORDEM DE SERVICO', badgeX + badgeW / 2, y + 8, { align: 'center' });
-  doc.setFontSize(14);
-  doc.text(`#${os.numero_os}`, badgeX + badgeW / 2, y + 17, { align: 'center' });
+  doc.text('ORDEM DE SERVICO', badgeX + badgeW / 2, y + 9, { align: 'center' });
+  doc.setFontSize(18);
+  doc.text(`#${os.numero_os}`, badgeX + badgeW / 2, y + 19, { align: 'center' });
 
-  y += 30;
+  y += 32;
 
   // Header separator
   doc.setDrawColor(...BLUE_ACCENT);
   doc.setLineWidth(0.8);
   doc.line(margin, y, pageWidth - margin, y);
-  y += 8;
+  y += 9;
 
   // ─── META ROW (Status, Prioridade, Datas) ─────────────────
   const colW = contentWidth / 4;
@@ -110,20 +144,20 @@ export async function generateOSPdf(os: OrdemServico, config: Partial<Configurac
     formatDate(os.data_previsao),
   ];
 
-  doc.setFontSize(7);
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...GRAY_TEXT);
   metaLabels.forEach((label, i) => {
     doc.text(label, margin + i * colW, y);
   });
-  y += 5;
-  doc.setFontSize(10);
+  y += 6;
+  doc.setFontSize(13);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...DARK_TEXT);
   metaValues.forEach((val, i) => {
     doc.text(val, margin + i * colW, y);
   });
-  y += 10;
+  y += 11;
 
   // ─── DADOS DO CLIENTE ──────────────────────────────────────
   y = drawSectionHeader(doc, 'DADOS DO CLIENTE', margin, y, contentWidth);
@@ -133,14 +167,14 @@ export async function generateOSPdf(os: OrdemServico, config: Partial<Configurac
     { label: 'Nome', value: cliente?.nome || '-', flex: 2 },
     { label: 'Telefone/Celular', value: cliente?.celular || cliente?.telefone || '-', flex: 1 },
   ]);
-  y += 12;
+  y += 14;
 
   if (cliente?.endereco || cliente?.cidade) {
     drawFieldRow(doc, margin, y, contentWidth, [
       { label: 'Endereco', value: cliente?.endereco || '-', flex: 2 },
       { label: 'Cidade/UF', value: [cliente?.cidade, cliente?.estado].filter(Boolean).join('/') || '-', flex: 1 },
     ]);
-    y += 12;
+    y += 14;
   }
 
   y += 3;
@@ -154,7 +188,7 @@ export async function generateOSPdf(os: OrdemServico, config: Partial<Configurac
     { label: 'Marca', value: equip?.marca || '-', flex: 1 },
     { label: 'Modelo', value: equip?.modelo || '-', flex: 1 },
   ]);
-  y += 12;
+  y += 14;
 
   if (equip?.numero_serie) {
     drawFieldRow(doc, margin, y, contentWidth, [
@@ -162,7 +196,7 @@ export async function generateOSPdf(os: OrdemServico, config: Partial<Configurac
       { label: 'Cor', value: equip?.cor || '-', flex: 1 },
       { label: 'Condicao', value: equip?.condicao_entrada || '-', flex: 1 },
     ]);
-    y += 12;
+    y += 14;
   }
 
   y += 3;
@@ -174,140 +208,152 @@ export async function generateOSPdf(os: OrdemServico, config: Partial<Configurac
 
   // ─── LAUDO TECNICO ─────────────────────────────────────────
   if (os.laudo_tecnico) {
-    if (y > 240) { doc.addPage(); y = 20; }
+    if (y > 230) { doc.addPage(); y = 20; }
     y = drawSectionHeader(doc, 'LAUDO TECNICO', margin, y, contentWidth);
     y = drawTextBlock(doc, os.laudo_tecnico, margin, y, contentWidth);
     y += 5;
   }
 
-  // ─── SERVICO EXECUTADO (note) ────────────────────────────────
+  // ─── NOTA TECNICA ────────────────────────────────────────────
   if (os.servico_executado) {
-    if (y > 240) { doc.addPage(); y = 20; }
+    if (y > 230) { doc.addPage(); y = 20; }
     y = drawSectionHeader(doc, 'NOTA TECNICA', margin, y, contentWidth);
     y = drawTextBlock(doc, os.servico_executado, margin, y, contentWidth);
     y += 5;
   }
 
-  // ─── SERVICOS EXECUTADOS (tabela) ─────────────────────────────
-  if (os.os_servicos && os.os_servicos.length > 0) {
-    if (y > 220) { doc.addPage(); y = 20; }
-    y = drawSectionHeader(doc, 'SERVICOS EXECUTADOS', margin, y, contentWidth);
-
-    autoTable(doc, {
-      startY: y,
-      head: [['Servico', 'Qtd', 'Preco Unit.', 'Total']],
-      body: os.os_servicos.map(s => [
-        s.descricao || '-',
-        String(s.quantidade),
-        formatCurrency(s.preco_unitario),
-        formatCurrency(s.preco_total),
-      ]),
-      styles: { fontSize: 8, cellPadding: 3, textColor: [...DARK_TEXT] },
-      headStyles: { fillColor: [...NAVY], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
-      alternateRowStyles: { fillColor: [...LIGHT_BG] },
-      columnStyles: {
-        0: { cellWidth: 'auto' },
-        1: { cellWidth: 20, halign: 'center' },
-        2: { cellWidth: 30, halign: 'right' },
-        3: { cellWidth: 30, halign: 'right' },
-      },
-      margin: { left: margin, right: margin },
-    });
-
-    y = (doc as any).lastAutoTable?.finalY || y + 20;
-    y += 8;
-  }
+  // ─── CLASSIFY ITEMS ────────────────────────────────────────
+  const items = classifyItems(os);
 
   // ─── PRODUTOS / PECAS ─────────────────────────────────────
-  if (os.os_produtos && os.os_produtos.length > 0) {
-    if (y > 220) { doc.addPage(); y = 20; }
-    y = drawSectionHeader(doc, 'PRODUTOS / PECAS', margin, y, contentWidth);
+  if (y > 220) { doc.addPage(); y = 20; }
+  y = drawSectionHeader(doc, 'PRODUTOS / PECAS', margin, y, contentWidth);
 
+  if (items.produtos.length > 0) {
     autoTable(doc, {
       startY: y,
-      head: [['Produto', 'Qtd', 'Preco Unit.', 'Total']],
-      body: os.os_produtos.map(p => [
-        (p.produto as any)?.nome || '-',
+      head: [['Produto / Peca', 'Quantidade', 'Preco Unit.', 'Total']],
+      body: items.produtos.map(p => [
+        p.nome,
         String(p.quantidade),
         formatCurrency(p.preco_unitario),
         formatCurrency(p.preco_total),
       ]),
-      styles: { fontSize: 8, cellPadding: 3, textColor: [...DARK_TEXT] },
-      headStyles: { fillColor: [...NAVY], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
+      styles: { fontSize: 12, cellPadding: 4, textColor: [...DARK_TEXT], lineColor: [...BORDER_COLOR], lineWidth: 0.2 },
+      headStyles: { fillColor: [...NAVY], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 12 },
       alternateRowStyles: { fillColor: [...LIGHT_BG] },
       columnStyles: {
         0: { cellWidth: 'auto' },
-        1: { cellWidth: 20, halign: 'center' },
-        2: { cellWidth: 30, halign: 'right' },
-        3: { cellWidth: 30, halign: 'right' },
+        1: { cellWidth: 28, halign: 'center' },
+        2: { cellWidth: 36, halign: 'right' },
+        3: { cellWidth: 36, halign: 'right' },
       },
       margin: { left: margin, right: margin },
+      rowPageBreak: 'avoid',
+      didDrawPage: () => {},
     });
-
     y = (doc as any).lastAutoTable?.finalY || y + 20;
-    y += 8;
+  } else {
+    autoTable(doc, {
+      startY: y,
+      body: [['Nenhum produto ou peca informado']],
+      styles: { fontSize: 12, cellPadding: 4, textColor: [...GRAY_TEXT], lineColor: [...BORDER_COLOR], lineWidth: 0.2, halign: 'center', fontStyle: 'italic' },
+      columnStyles: { 0: { cellWidth: contentWidth } },
+      margin: { left: margin, right: margin },
+    });
+    y = (doc as any).lastAutoTable?.finalY || y + 10;
   }
+  y += 8;
+
+  // ─── SERVICOS ─────────────────────────────────────────────
+  if (y > 220) { doc.addPage(); y = 20; }
+  y = drawSectionHeader(doc, 'SERVICOS', margin, y, contentWidth);
+
+  if (items.servicos.length > 0) {
+    autoTable(doc, {
+      startY: y,
+      head: [['Servico', 'Quantidade', 'Preco Unit.', 'Total']],
+      body: items.servicos.map(s => [
+        s.nome,
+        String(s.quantidade),
+        formatCurrency(s.preco_unitario),
+        formatCurrency(s.preco_total),
+      ]),
+      styles: { fontSize: 12, cellPadding: 4, textColor: [...DARK_TEXT], lineColor: [...BORDER_COLOR], lineWidth: 0.2 },
+      headStyles: { fillColor: [...NAVY], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 12 },
+      alternateRowStyles: { fillColor: [...LIGHT_BG] },
+      columnStyles: {
+        0: { cellWidth: 'auto' },
+        1: { cellWidth: 28, halign: 'center' },
+        2: { cellWidth: 36, halign: 'right' },
+        3: { cellWidth: 36, halign: 'right' },
+      },
+      margin: { left: margin, right: margin },
+      rowPageBreak: 'avoid',
+      didDrawPage: () => {},
+    });
+    y = (doc as any).lastAutoTable?.finalY || y + 20;
+  } else {
+    autoTable(doc, {
+      startY: y,
+      body: [['Nenhum servico informado']],
+      styles: { fontSize: 12, cellPadding: 4, textColor: [...GRAY_TEXT], lineColor: [...BORDER_COLOR], lineWidth: 0.2, halign: 'center', fontStyle: 'italic' },
+      columnStyles: { 0: { cellWidth: contentWidth } },
+      margin: { left: margin, right: margin },
+    });
+    y = (doc as any).lastAutoTable?.finalY || y + 10;
+  }
+  y += 8;
 
   // ─── RESUMO FINANCEIRO ─────────────────────────────────────
-  if (y > 230) { doc.addPage(); y = 20; }
+  if (y > 235) { doc.addPage(); y = 20; }
   y = drawSectionHeader(doc, 'RESUMO FINANCEIRO', margin, y, contentWidth);
 
-  const prodTotal = (os.os_produtos || []).reduce((s, p) => s + (p.preco_total || 0), 0);
-  const svcTotal = (os.os_servicos || []).reduce((s, sv) => s + (sv.preco_total || 0), 0);
-
   const finBoxY = y;
-  const finH = svcTotal > 0 && prodTotal > 0 ? 35 : 28;
+  const finH = 40;
   doc.setDrawColor(...BORDER_COLOR);
   doc.setLineWidth(0.3);
   doc.rect(margin, finBoxY, contentWidth, finH);
 
-  doc.setFontSize(9);
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...DARK_TEXT);
 
-  let finRowY = finBoxY + 7;
-  if (svcTotal > 0) {
-    doc.text('Valor dos Servicos:', margin + 4, finRowY);
-    doc.text(formatCurrency(svcTotal), pageWidth - margin - 4, finRowY, { align: 'right' });
-    finRowY += 7;
-  }
-  if (prodTotal > 0) {
-    doc.text('Valor das Pecas:', margin + 4, finRowY);
-    doc.text(formatCurrency(prodTotal), pageWidth - margin - 4, finRowY, { align: 'right' });
-    finRowY += 7;
-  }
-  if (svcTotal === 0 && prodTotal === 0) {
-    doc.text('Valor do Servico:', margin + 4, finRowY);
-    doc.text(formatCurrency(os.valor_servico), pageWidth - margin - 4, finRowY, { align: 'right' });
-    finRowY += 7;
-  }
+  let finRowY = finBoxY + 9;
+  doc.text('Total de Produtos / Pecas:', margin + 5, finRowY);
+  doc.text(formatCurrency(items.totalProdutos), pageWidth - margin - 5, finRowY, { align: 'right' });
+  finRowY += 9;
+
+  doc.text('Total de Servicos:', margin + 5, finRowY);
+  doc.text(formatCurrency(items.totalServicos), pageWidth - margin - 5, finRowY, { align: 'right' });
+  finRowY += 9;
 
   // Total row with background
   doc.setFillColor(...NAVY);
-  doc.rect(margin, finBoxY + finH - 10, contentWidth, 10, 'F');
-  doc.setFontSize(11);
+  doc.rect(margin, finBoxY + finH - 13, contentWidth, 13, 'F');
+  doc.setFontSize(17);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255);
-  doc.text('TOTAL:', margin + 4, finBoxY + finH - 3);
-  doc.text(formatCurrency(os.valor_total), pageWidth - margin - 4, finBoxY + finH - 3, { align: 'right' });
+  doc.text('TOTAL GERAL:', margin + 5, finBoxY + finH - 4);
+  doc.text(formatCurrency(items.totalGeral), pageWidth - margin - 5, finBoxY + finH - 4, { align: 'right' });
 
   y = finBoxY + finH + 6;
 
   // ─── TECNICO RESPONSAVEL ───────────────────────────────────
   const tecnico = os.tecnico as any;
   if (tecnico?.nome) {
-    doc.setFontSize(9);
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...GRAY_TEXT);
     doc.text(`Tecnico responsavel: ${tecnico.nome}`, margin, y);
-    y += 8;
+    y += 9;
   }
 
   // ─── ASSINATURAS ───────────────────────────────────────────
-  if (y > pageHeight - 45) { doc.addPage(); y = 20; }
-  y += 15;
+  if (y > pageHeight - 50) { doc.addPage(); y = 20; }
+  y += 18;
 
-  const sigLineLen = 70;
+  const sigLineLen = 75;
   const sig1X = margin + 10;
   const sig2X = pageWidth - margin - sigLineLen - 10;
 
@@ -315,9 +361,9 @@ export async function generateOSPdf(os: OrdemServico, config: Partial<Configurac
   doc.setLineWidth(0.4);
   doc.line(sig1X, y, sig1X + sigLineLen, y);
   doc.line(sig2X, y, sig2X + sigLineLen, y);
-  y += 5;
+  y += 6;
 
-  doc.setFontSize(8);
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...GRAY_TEXT);
   doc.text('Assinatura do Cliente', sig1X + sigLineLen / 2, y, { align: 'center' });
@@ -331,7 +377,7 @@ export async function generateOSPdf(os: OrdemServico, config: Partial<Configurac
     doc.setDrawColor(...BORDER_COLOR);
     doc.setLineWidth(0.3);
     doc.line(margin, footerY - 4, pageWidth - margin, footerY - 4);
-    doc.setFontSize(7);
+    doc.setFontSize(9);
     doc.setTextColor(...GRAY_TEXT);
     doc.text(
       `${config?.nome_empresa || 'FF Manutencoes'} - Documento gerado em ${new Date().toLocaleString('pt-BR')} - Pagina ${i} de ${pageCount}`,
@@ -346,15 +392,15 @@ export async function generateOSPdf(os: OrdemServico, config: Partial<Configurac
 
 function drawSectionHeader(doc: jsPDF, title: string, x: number, y: number, width: number): number {
   doc.setFillColor(...LIGHT_BG);
-  doc.rect(x, y - 4, width, 8, 'F');
+  doc.rect(x, y - 5, width, 10, 'F');
   doc.setDrawColor(...BLUE_ACCENT);
   doc.setLineWidth(0.8);
-  doc.line(x, y - 4, x, y + 4);
-  doc.setFontSize(8);
+  doc.line(x, y - 5, x, y + 5);
+  doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...NAVY);
-  doc.text(title, x + 4, y + 1);
-  return y + 8;
+  doc.text(title, x + 5, y + 2);
+  return y + 10;
 }
 
 function drawTextBlock(doc: jsPDF, text: string, x: number, y: number, width: number): number {
@@ -362,13 +408,13 @@ function drawTextBlock(doc: jsPDF, text: string, x: number, y: number, width: nu
   doc.setLineWidth(0.3);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
+  doc.setFontSize(12);
   doc.setTextColor(...DARK_TEXT);
-  const lines = doc.splitTextToSize(text, width - 8);
-  const blockH = Math.max(lines.length * 4.5 + 6, 14);
+  const lines = doc.splitTextToSize(text, width - 10);
+  const blockH = Math.max(lines.length * 6 + 8, 18);
 
   doc.rect(x, y, width, blockH);
-  doc.text(lines, x + 4, y + 5);
+  doc.text(lines, x + 5, y + 7);
   return y + blockH + 2;
 }
 
@@ -384,15 +430,15 @@ function drawFieldRow(doc: jsPDF, x: number, y: number, totalWidth: number, fiel
 
   fields.forEach(field => {
     const w = (field.flex / totalFlex) * totalWidth;
-    doc.setFontSize(7);
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...GRAY_TEXT);
     doc.text(field.label + ':', curX, y);
 
-    doc.setFontSize(9);
+    doc.setFontSize(13);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...DARK_TEXT);
-    doc.text(field.value, curX, y + 5);
+    doc.text(field.value, curX, y + 6);
     curX += w;
   });
 }

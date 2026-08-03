@@ -49,7 +49,7 @@ export default function Dashboard() {
     { label: 'Concluidas', value: stats.osConcluidas, icon: CheckCircle, color: 'from-emerald-500 to-green-500', bg: 'bg-emerald-500/10' },
     { label: 'Total OS', value: stats.totalOS, icon: ClipboardList, color: 'from-slate-400 to-slate-500', bg: 'bg-slate-500/10' },
     { label: 'Clientes', value: stats.totalClientes, icon: Users, color: 'from-cyan-500 to-teal-500', bg: 'bg-cyan-500/10' },
-    { label: 'Produtos', value: stats.totalProdutos, icon: Package, color: 'from-rose-500 to-pink-500', bg: 'bg-rose-500/10' },
+    { label: 'Produtos e Serviços', value: stats.totalProdutos, icon: Package, color: 'from-rose-500 to-pink-500', bg: 'bg-rose-500/10' },
     { label: 'Tecnicos', value: stats.totalTecnicos, icon: UserCog, color: 'from-teal-500 to-emerald-500', bg: 'bg-teal-500/10' },
   ];
 

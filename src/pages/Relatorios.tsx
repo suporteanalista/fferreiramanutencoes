@@ -57,7 +57,7 @@ export default function Relatorios() {
       os_periodo: 'Relatorio de Ordens de Servico por Periodo',
       os_tecnico: 'Relatorio de OS por Tecnico',
       clientes: 'Relatorio de Clientes',
-      produtos: 'Relatorio de Produtos em Estoque',
+      produtos: 'Relatório de Produtos e Serviços',
     };
     doc.text(titles[reportType], 14, 48);
 
@@ -224,7 +224,7 @@ export default function Relatorios() {
     { id: 'os_periodo' as ReportType, title: 'OS por Periodo', desc: 'Ordens de servico filtradas por data' },
     { id: 'os_tecnico' as ReportType, title: 'OS por Tecnico', desc: 'Resumo de OS agrupadas por tecnico' },
     { id: 'clientes' as ReportType, title: 'Clientes', desc: 'Lista completa de clientes cadastrados' },
-    { id: 'produtos' as ReportType, title: 'Produtos', desc: 'Inventario de produtos e pecas' },
+    { id: 'produtos' as ReportType, title: 'Produtos e Serviços', desc: 'Inventário de produtos, peças e serviços' },
   ];
 
   return (

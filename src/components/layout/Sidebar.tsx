@@ -12,7 +12,7 @@ const menuItems: { path: string; label: string; icon: typeof Home; recurso?: Rec
   { path: '/clientes', label: 'Clientes', icon: Users, recurso: 'clientes' },
   { path: '/equipamentos', label: 'Equipamentos', icon: Monitor, recurso: 'equipamentos' },
   { path: '/tecnicos', label: 'Tecnicos', icon: UserCog, recurso: 'tecnicos' },
-  { path: '/produtos', label: 'Produtos', icon: Package, recurso: 'produtos' },
+  { path: '/produtos', label: 'Produtos e Serviços', icon: Package, recurso: 'produtos' },
   { path: '/relatorios', label: 'Relatorios', icon: BarChart3, recurso: 'relatorios' },
   { path: '/relatorios/revisoes', label: 'Revisoes Futuras', icon: Calendar, recurso: 'relatorios' },
   { path: '/usuarios', label: 'Usuarios', icon: Users, adminOnly: true },

@@ -13,7 +13,7 @@ import { OrdemServico, Produto, OsProduto, OsServico, Cliente, Equipamento, Tecn
 import {
   Plus, Search, Clock, AlertTriangle, CheckCircle, Truck,
   ChevronRight, ChevronLeft, Package, Trash2, DollarSign, Pencil, X,
-  FileText, Printer, Calendar
+  FileText, Printer, Calendar, Wrench
 } from 'lucide-react';
 
 interface TipoEquipamento {
@@ -383,7 +383,7 @@ export default function OrdensServico() {
   };
 
   const openProdutoNew = () => {
-    setEditingProduto({ nome: '', descricao: '', codigo: '', categoria: '', preco_custo: 0, preco_venda: 0, quantidade_estoque: 1 });
+    setEditingProduto({ nome: '', descricao: '', codigo: '', categoria: '', preco_custo: 0, preco_venda: 0, quantidade_estoque: 1, tipo_item: 'produto', ativo: true });
     setProdutoModalOpen(true);
   };
 
@@ -392,11 +392,12 @@ export default function OrdensServico() {
     setProdutoLoading(true);
     const newId = crypto.randomUUID();
     const payload = { ...editingProduto, id: newId, criado_em: new Date().toISOString(), atualizado_em: new Date().toISOString() };
+    if (editingProduto.tipo_item === 'servico') { payload.quantidade_estoque = 0; payload.preco_custo = 0; }
     setProdutos(prev => [...prev, { ...payload } as Produto]);
     setProdutoModalOpen(false);
     await saveOffline('produtos', payload, 'create');
     setProdutoLoading(false);
-    showToast('Produto cadastrado');
+    showToast('Item cadastrado');
     loadAll();
   };
 
@@ -808,14 +809,14 @@ export default function OrdensServico() {
             ))}
           </div>
           <div className="flex mt-2">
-            <span className={`text-xs flex-1 ${step >= 1 ? 'text-emerald-400' : 'text-slate-500'}`}>Dados</span>
-            <span className={`text-xs flex-1 ${step >= 2 ? 'text-emerald-400' : 'text-slate-500'}`}>Servico</span>
-            <span className={`text-xs ${step >= 3 ? 'text-emerald-400' : 'text-slate-500'}`}>Produtos</span>
+            <span className={`text-xs flex-1 text-center ${step >= 1 ? 'text-emerald-400' : 'text-slate-500'}`}>Dados</span>
+            <span className={`text-xs flex-1 text-center ${step >= 2 ? 'text-emerald-400' : 'text-slate-500'}`}>Serviço</span>
+            <span className={`text-xs flex-1 text-center ${step >= 3 ? 'text-emerald-400' : 'text-slate-500'}`}>Produtos e Serviços</span>
           </div>
         </div>
 
         {step === 1 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">Cliente *</label>
               <div className="flex gap-2">
@@ -966,17 +967,22 @@ export default function OrdensServico() {
         {step === 3 && (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Adicionar Produto/Peca</label>
-              <div className="flex gap-2">
-                <select onChange={(e) => { if (e.target.value) { addProdutoToOS(e.target.value); e.target.value = ''; } }} className="flex-1 px-3 py-2.5 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
-                  <option value="">Selecione um produto</option>
-                  {produtos.map(p => <option key={p.id} value={p.id}>{p.nome} - {formatCurrency(p.preco_venda)} (estoque: {p.quantidade_estoque})</option>)}
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">Adicionar Produto ou Serviço</label>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <select onChange={(e) => { if (e.target.value) { addProdutoToOS(e.target.value); e.target.value = ''; } }} className="flex-1 w-full px-3 py-2.5 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 min-h-[44px]">
+                  <option value="">Selecione um item</option>
+                  <optgroup label="Produtos">
+                    {produtos.filter(p => p.tipo_item !== 'servico').map(p => <option key={p.id} value={p.id}>{p.nome} - {formatCurrency(p.preco_venda)} (estoque: {p.quantidade_estoque})</option>)}
+                  </optgroup>
+                  <optgroup label="Serviços">
+                    {produtos.filter(p => p.tipo_item === 'servico').map(p => <option key={p.id} value={p.id}>{p.nome} - {formatCurrency(p.preco_venda)}</option>)}
+                  </optgroup>
                 </select>
                 <button
                   type="button"
                   onClick={openProdutoNew}
-                  className="flex items-center justify-center w-10 h-10 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-lg hover:bg-emerald-500/20 transition-all"
-                  title="Cadastrar novo produto"
+                  className="flex items-center justify-center w-full sm:w-10 h-10 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-lg hover:bg-emerald-500/20 transition-all flex-shrink-0"
+                  title="Cadastrar novo item"
                 >
                   <Plus className="w-5 h-5" />
                 </button>
@@ -984,15 +990,21 @@ export default function OrdensServico() {
             </div>
 
             {osProdutos.length > 0 && (
-              <div className="bg-slate-700/30 rounded-lg overflow-hidden">
-                <table className="w-full">
-                  <thead><tr className="border-b border-slate-600/50"><th className="px-3 py-2 text-left text-xs text-slate-400">Produto</th><th className="px-3 py-2 text-center text-xs text-slate-400 w-20">Qtd</th><th className="px-3 py-2 text-right text-xs text-slate-400">Total</th><th className="w-10"></th></tr></thead>
+              <div className="bg-slate-700/30 rounded-lg overflow-x-auto">
+                <table className="w-full min-w-[480px]">
+                  <thead><tr className="border-b border-slate-600/50"><th className="px-3 py-2 text-left text-xs text-slate-400">Item</th><th className="px-3 py-2 text-center text-xs text-slate-400 w-20">Qtd</th><th className="px-3 py-2 text-right text-xs text-slate-400">Total</th><th className="w-10"></th></tr></thead>
                   <tbody>
                     {osProdutos.map((p, i) => {
                       const prod = produtos.find(pr => pr.id === p.produto_id);
+                      const isServico = prod?.tipo_item === 'servico';
                       return (
                         <tr key={i} className="border-b border-slate-600/30">
-                          <td className="px-3 py-2 text-sm text-white">{prod?.nome || '-'}</td>
+                          <td className="px-3 py-2 text-sm text-white">
+                            <div className="flex items-center gap-2">
+                              <span className={`inline-flex text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${isServico ? 'bg-sky-500/15 text-sky-400' : 'bg-rose-500/15 text-rose-400'}`}>{isServico ? 'Serviço' : 'Produto'}</span>
+                              <span>{prod?.nome || '-'}</span>
+                            </div>
+                          </td>
                           <td className="px-3 py-2 text-center"><input type="number" value={p.quantidade || 1} onChange={(e) => updateOsProdutoQty(i, parseInt(e.target.value) || 1)} className="w-16 px-2 py-1 bg-slate-600 border border-slate-500 rounded text-white text-center text-sm" min="1" /></td>
                           <td className="px-3 py-2 text-sm text-right text-emerald-400">{formatCurrency(p.preco_total || 0)}</td>
                           <td className="px-3 py-2"><button onClick={() => removeOsProduto(i)} className="text-red-400 hover:text-red-300"><Trash2 className="w-4 h-4" /></button></td>
@@ -1026,15 +1038,15 @@ export default function OrdensServico() {
         )}
 
         <div className="flex justify-between mt-6 pt-4 border-t border-slate-700">
-          <button onClick={() => step > 1 ? setStep(step - 1) : setModalOpen(false)} className="px-4 py-2.5 text-slate-300 hover:text-white transition-colors">
+          <button onClick={() => step > 1 ? setStep(step - 1) : setModalOpen(false)} className="px-4 py-2.5 text-slate-300 hover:text-white transition-colors min-h-[44px]">
             {step > 1 ? 'Voltar' : 'Cancelar'}
           </button>
           {step < 3 ? (
-            <button onClick={() => setStep(step + 1)} disabled={step === 1 && !editing.cliente_id} className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-sky-500 text-white font-medium rounded-lg disabled:opacity-50">
-              Proximo
+            <button onClick={() => setStep(step + 1)} disabled={step === 1 && !editing.cliente_id} className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-sky-500 text-white font-medium rounded-lg disabled:opacity-50 min-h-[44px]">
+              Próximo
             </button>
           ) : (
-            <button onClick={handleSave} disabled={loading} className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-sky-500 text-white font-medium rounded-lg disabled:opacity-50">
+            <button onClick={handleSave} disabled={loading} className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-sky-500 text-white font-medium rounded-lg disabled:opacity-50 min-h-[44px]">
               {loading ? 'Salvando...' : editing.id ? 'Atualizar OS' : 'Criar OS'}
             </button>
           )}
@@ -1189,40 +1201,61 @@ export default function OrdensServico() {
         </div>
       </Modal>
 
-      <Modal isOpen={produtoModalOpen} onClose={() => setProdutoModalOpen(false)} title="Novo Produto / Peca" size="md">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="md:col-span-2">
+      <Modal isOpen={produtoModalOpen} onClose={() => setProdutoModalOpen(false)} title="Novo Item" size="md">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-slate-300 mb-1.5">Tipo do Item *</label>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setEditingProduto({ ...editingProduto, tipo_item: 'produto' })} className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border transition-all min-h-[44px] ${editingProduto.tipo_item === 'servico' ? 'bg-slate-700/50 border-slate-600 text-slate-400' : 'bg-emerald-500/15 border-emerald-500/50 text-emerald-400'}`}>
+                <Package className="w-4 h-4" /> Produto
+              </button>
+              <button type="button" onClick={() => setEditingProduto({ ...editingProduto, tipo_item: 'servico', quantidade_estoque: 0, preco_custo: 0 })} className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border transition-all min-h-[44px] ${editingProduto.tipo_item === 'servico' ? 'bg-sky-500/15 border-sky-500/50 text-sky-400' : 'bg-slate-700/50 border-slate-600 text-slate-400'}`}>
+                <Wrench className="w-4 h-4" /> Serviço
+              </button>
+            </div>
+          </div>
+          <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-slate-300 mb-1.5">Nome *</label>
-            <input type="text" value={editingProduto.nome || ''} onChange={(e) => setEditingProduto({ ...editingProduto, nome: e.target.value })} className="w-full px-3 py-2.5 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Nome do produto ou peca" />
+            <input type="text" value={editingProduto.nome || ''} onChange={(e) => setEditingProduto({ ...editingProduto, nome: e.target.value })} className="w-full px-3 py-2.5 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Nome do item" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">Codigo</label>
-            <input type="text" value={editingProduto.codigo || ''} onChange={(e) => setEditingProduto({ ...editingProduto, codigo: e.target.value })} className="w-full px-3 py-2.5 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Codigo interno" />
+            <label className="block text-sm font-medium text-slate-300 mb-1.5">Código</label>
+            <input type="text" value={editingProduto.codigo || ''} onChange={(e) => setEditingProduto({ ...editingProduto, codigo: e.target.value })} className="w-full px-3 py-2.5 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Código interno" />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-1.5">Categoria</label>
-            <input type="text" value={editingProduto.categoria || ''} onChange={(e) => setEditingProduto({ ...editingProduto, categoria: e.target.value })} className="w-full px-3 py-2.5 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Ex: Pecas, Acessorios..." />
+            <input type="text" value={editingProduto.categoria || ''} onChange={(e) => setEditingProduto({ ...editingProduto, categoria: e.target.value })} className="w-full px-3 py-2.5 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Ex: Peças, Acessórios..." />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">Preco de Custo (R$)</label>
-            <input type="number" value={editingProduto.preco_custo || 0} onChange={(e) => setEditingProduto({ ...editingProduto, preco_custo: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2.5 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50" min="0" step="0.01" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">Preco de Venda (R$) *</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1.5">Preço de Venda (R$) *</label>
             <input type="number" value={editingProduto.preco_venda || 0} onChange={(e) => setEditingProduto({ ...editingProduto, preco_venda: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2.5 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50" min="0" step="0.01" />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">Quantidade em Estoque</label>
-            <input type="number" value={editingProduto.quantidade_estoque || 0} onChange={(e) => setEditingProduto({ ...editingProduto, quantidade_estoque: parseInt(e.target.value) || 0 })} className="w-full px-3 py-2.5 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50" min="0" />
+          <div className="sm:col-span-2">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input type="checkbox" checked={editingProduto.ativo !== false} onChange={(e) => setEditingProduto({ ...editingProduto, ativo: e.target.checked })} className="w-5 h-5 rounded accent-emerald-500" />
+              <span className="text-sm font-medium text-slate-300">Ativo</span>
+            </label>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">Descricao</label>
-            <input type="text" value={editingProduto.descricao || ''} onChange={(e) => setEditingProduto({ ...editingProduto, descricao: e.target.value })} className="w-full px-3 py-2.5 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Descricao opcional" />
+          {editingProduto.tipo_item !== 'servico' && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1.5">Preço de Custo (R$)</label>
+                <input type="number" value={editingProduto.preco_custo || 0} onChange={(e) => setEditingProduto({ ...editingProduto, preco_custo: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2.5 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50" min="0" step="0.01" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1.5">Quantidade em Estoque</label>
+                <input type="number" value={editingProduto.quantidade_estoque || 0} onChange={(e) => setEditingProduto({ ...editingProduto, quantidade_estoque: parseInt(e.target.value) || 0 })} className="w-full px-3 py-2.5 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50" min="0" />
+              </div>
+            </>
+          )}
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-slate-300 mb-1.5">Descrição</label>
+            <input type="text" value={editingProduto.descricao || ''} onChange={(e) => setEditingProduto({ ...editingProduto, descricao: e.target.value })} className="w-full px-3 py-2.5 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Descrição opcional" />
           </div>
         </div>
-        <div className="flex justify-end gap-3 mt-6">
-          <button onClick={() => setProdutoModalOpen(false)} className="px-4 py-2.5 text-slate-300 hover:text-white transition-colors">Cancelar</button>
-          <button onClick={handleProdutoSave} disabled={produtoLoading || !editingProduto.nome?.trim()} className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-sky-500 text-white font-medium rounded-lg hover:from-emerald-600 hover:to-sky-600 transition-all disabled:opacity-50">
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 mt-6">
+          <button onClick={() => setProdutoModalOpen(false)} className="px-4 py-2.5 text-slate-300 hover:text-white transition-colors min-h-[44px]">Cancelar</button>
+          <button onClick={handleProdutoSave} disabled={produtoLoading || !editingProduto.nome?.trim()} className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-sky-500 text-white font-medium rounded-lg hover:from-emerald-600 hover:to-sky-600 transition-all disabled:opacity-50 min-h-[44px]">
             {produtoLoading ? 'Salvando...' : 'Cadastrar'}
           </button>
         </div>

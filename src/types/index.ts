@@ -67,6 +67,8 @@ export interface Produto {
   preco_custo: number;
   preco_venda: number;
   categoria: string;
+  tipo_item: 'produto' | 'servico';
+  ativo: boolean;
   criado_em: string;
   atualizado_em: string;
 }

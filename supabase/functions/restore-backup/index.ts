@@ -35,7 +35,6 @@ Deno.serve(async (req: Request) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    // Verify caller is authenticated
     const { data: { user: caller }, error: authError } = await anonClient.auth.getUser();
     if (authError || !caller) {
       return new Response(
@@ -44,7 +43,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Verify caller is an administrator
     const { data: callerProfile } = await supabaseClient
       .from("profiles")
       .select("permissao")
@@ -67,7 +65,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Connect directly to Postgres to bypass PostgREST DELETE restrictions
     client = new postgres.Client({ connectionString: dbUrl });
     await client.connect();
 
@@ -83,8 +80,28 @@ Deno.serve(async (req: Request) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
+    const msg = err instanceof Error ? err.message : "Erro interno do servidor";
+
+    // If the function raised RESTORE_FAILED:..., extract the JSON report
+    if (msg.startsWith("RESTORE_FAILED:")) {
+      const reportJson = msg.substring("RESTORE_FAILED:".length);
+      try {
+        const report = JSON.parse(reportJson);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Falha ao restaurar uma ou mais tabelas - restauracao cancelada (rollback)",
+            tables: report,
+          }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      } catch {
+        // fall through to generic error
+      }
+    }
+
     return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : "Erro interno do servidor" }),
+      JSON.stringify({ error: msg }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } finally {

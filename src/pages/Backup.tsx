@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase, supabaseUrl } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../components/ui/Toast';
-import { Database, Upload, Download, AlertTriangle, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Database, Upload, Download, AlertTriangle, CheckCircle, XCircle, Loader2, FileJson } from 'lucide-react';
 import { saveAs } from 'file-saver';
 
 const REQUIRED_SECTIONS = [
@@ -15,11 +15,22 @@ const REQUIRED_SECTIONS = [
   'configuracoes',
 ] as const;
 
+const SECTION_LABELS: Record<string, string> = {
+  clientes: 'Clientes',
+  equipamentos: 'Equipamentos',
+  tecnicos: 'Tecnicos',
+  produtos: 'Produtos',
+  ordens_servico: 'Ordens de Servico',
+  os_produtos: 'Itens de OS',
+  configuracoes: 'Configuracoes',
+};
+
 interface TableReport {
   table: string;
   expected: number;
   inserted: number;
-  skipped: number;
+  updated: number;
+  unchanged: number;
   failed: number;
 }
 
@@ -28,6 +39,7 @@ interface RestoreResult {
   error?: string;
   tables?: TableReport[];
   warnings?: string[];
+  validation_errors?: string[];
 }
 
 export default function Backup() {
@@ -76,8 +88,11 @@ export default function Backup() {
     if (!data || typeof data !== 'object') {
       return 'Arquivo de backup invalido';
     }
-    if (!data.version || !data.data) {
-      return 'Arquivo de backup invalido: formato incorreto';
+    if (!data.version) {
+      return 'Arquivo de backup invalido: campo "version" ausente';
+    }
+    if (!data.data) {
+      return 'Arquivo de backup invalido: secao "data" ausente';
     }
     for (const section of REQUIRED_SECTIONS) {
       if (!data.data[section]) {
@@ -111,7 +126,7 @@ export default function Backup() {
         }
         setRestoreData(data);
       } catch {
-        setValidationError('Erro ao ler arquivo JSON');
+        setValidationError('Erro ao ler arquivo JSON - arquivo corrompido ou formato invalido');
         setRestoreData(null);
         showToast('Erro ao ler arquivo JSON', 'error');
       }
@@ -138,7 +153,7 @@ export default function Backup() {
       const result: RestoreResult = await response.json();
 
       if (!response.ok) {
-        setRestoreResult({ success: false, error: result.error || 'Erro ao restaurar backup' });
+        setRestoreResult(result);
         showToast(result.error || 'Erro ao restaurar backup', 'error');
         setLoading(false);
         return;
@@ -148,7 +163,7 @@ export default function Backup() {
 
       if (result.success) {
         const allMatch = result.tables?.every(
-          (t) => t.expected === t.inserted && t.failed === 0
+          (t) => t.failed === 0
         );
         if (allMatch) {
           showToast('Backup restaurado com sucesso - todos os registros conferem');
@@ -226,7 +241,7 @@ export default function Backup() {
             </div>
             <div>
               <h2 className="text-lg font-semibold text-white">Restaurar Backup</h2>
-              <p className="text-sm text-slate-400">Importe dados de um arquivo JSON</p>
+              <p className="text-sm text-slate-400">Importe dados de um arquivo JSON (preserva dados existentes)</p>
             </div>
           </div>
 
@@ -256,14 +271,35 @@ export default function Backup() {
             </div>
           )}
 
+          {/* Preview before restore */}
           {restoreData && !validationError && !showConfirm && !restoreResult && (
-            <div className="bg-slate-700/30 rounded-lg p-4 mb-4 space-y-1.5">
-              <p className="text-sm text-slate-300">Conteudo do backup:</p>
-              {REQUIRED_SECTIONS.map((section) => (
-                <p key={section} className="text-xs text-slate-400">
-                  {section}: {restoreData.data[section]?.length || 0} registros
+            <div className="bg-slate-700/30 rounded-lg p-4 mb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <FileJson className="w-4 h-4 text-sky-400" />
+                <p className="text-sm text-slate-300 font-medium">Preview do Backup</p>
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-400">Versao</span>
+                  <span className="text-slate-300">{restoreData.version}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-400">Data de criacao</span>
+                  <span className="text-slate-300">{new Date(restoreData.created_at).toLocaleString('pt-BR')}</span>
+                </div>
+                <div className="border-t border-slate-600/50 my-2"></div>
+                {REQUIRED_SECTIONS.map((section) => (
+                  <div key={section} className="flex justify-between text-xs">
+                    <span className="text-slate-400">{SECTION_LABELS[section]}</span>
+                    <span className="text-slate-300">{restoreData.data[section]?.length || 0} registros</span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 pt-3 border-t border-slate-600/50">
+                <p className="text-xs text-slate-400">
+                  Os registros do backup serao inseridos ou atualizados. Dados existentes nao presentes no backup serao preservados.
                 </p>
-              ))}
+              </div>
             </div>
           )}
 
@@ -271,9 +307,12 @@ export default function Backup() {
             <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mb-4">
               <div className="flex items-center gap-2 mb-2">
                 <AlertTriangle className="w-5 h-5 text-amber-400" />
-                <span className="text-sm font-medium text-amber-400">Atencao!</span>
+                <span className="text-sm font-medium text-amber-400">Confirmacao necessaria</span>
               </div>
-              <p className="text-sm text-slate-300">Todos os dados atuais serao substituidos pelos dados do backup. Esta acao nao pode ser desfeita. Deseja continuar?</p>
+              <p className="text-sm text-slate-300">
+                Serao inseridos ou atualizados {REQUIRED_SECTIONS.reduce((acc, s) => acc + (restoreData?.data[s]?.length || 0), 0)} registros
+                do backup. Registros existentes nao presentes no backup serao preservados. Deseja continuar?
+              </p>
               <div className="flex gap-3 mt-3">
                 <button onClick={handleRestore} disabled={loading} className="px-4 py-2 bg-amber-500 text-white text-sm font-medium rounded-lg hover:bg-amber-600 disabled:opacity-50 flex items-center gap-2">
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
@@ -313,25 +352,39 @@ export default function Backup() {
                   <p className="text-xs text-red-300/80 mb-3">{restoreResult.error}</p>
                 )}
 
+                {/* Validation errors */}
+                {restoreResult.validation_errors && restoreResult.validation_errors.length > 0 && (
+                  <div className="mb-3 space-y-1">
+                    <p className="text-xs text-red-400 font-medium">Erros de validacao:</p>
+                    {restoreResult.validation_errors.map((err, i) => (
+                      <p key={i} className="text-xs text-red-300/80 pl-3 border-l-2 border-red-500/30">{err}</p>
+                    ))}
+                    <p className="text-xs text-slate-400 mt-2">Nenhum dado foi alterado.</p>
+                  </div>
+                )}
+
+                {/* Per-table report */}
                 {restoreResult.tables && (
                   <div className="space-y-2">
-                    <div className="grid grid-cols-5 gap-2 text-xs font-medium text-slate-400 px-2">
+                    <div className="grid grid-cols-6 gap-2 text-xs font-medium text-slate-400 px-2">
                       <span>Tabela</span>
                       <span className="text-right">Esperado</span>
                       <span className="text-right">Inserido</span>
+                      <span className="text-right">Atualizado</span>
                       <span className="text-right">Falhas</span>
                       <span className="text-center">Status</span>
                     </div>
                     {restoreResult.tables.map((t) => {
-                      const match = t.expected === t.inserted && t.failed === 0;
+                      const ok = t.failed === 0;
                       return (
-                        <div key={t.table} className="grid grid-cols-5 gap-2 text-xs text-slate-300 px-2 py-1.5 bg-slate-800/40 rounded">
-                          <span className="font-medium">{t.table}</span>
+                        <div key={t.table} className="grid grid-cols-6 gap-2 text-xs text-slate-300 px-2 py-1.5 bg-slate-800/40 rounded">
+                          <span className="font-medium">{SECTION_LABELS[t.table] || t.table}</span>
                           <span className="text-right">{t.expected}</span>
-                          <span className="text-right">{t.inserted}</span>
+                          <span className="text-right text-emerald-400/80">{t.inserted}</span>
+                          <span className="text-right text-sky-400/80">{t.updated}</span>
                           <span className="text-right">{t.failed}</span>
                           <span className="text-center">
-                            {match ? (
+                            {ok ? (
                               <CheckCircle className="w-4 h-4 text-emerald-400 inline" />
                             ) : (
                               <XCircle className="w-4 h-4 text-red-400 inline" />
@@ -345,8 +398,9 @@ export default function Backup() {
 
                 {restoreResult.warnings && restoreResult.warnings.length > 0 && (
                   <div className="mt-3 space-y-1">
+                    <p className="text-xs text-amber-400 font-medium">Avisos:</p>
                     {restoreResult.warnings.map((w, i) => (
-                      <p key={i} className="text-xs text-amber-400/80">{w}</p>
+                      <p key={i} className="text-xs text-amber-400/80 pl-3 border-l-2 border-amber-500/30">{w}</p>
                     ))}
                   </div>
                 )}

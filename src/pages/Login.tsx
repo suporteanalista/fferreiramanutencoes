@@ -31,12 +31,12 @@ export default function Login() {
       <div className="relative w-full max-w-md">
         <div className="backdrop-blur-2xl bg-white/[0.07] border border-white/20 rounded-3xl p-6 sm:p-10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] shadow-blue-950/50">
           <div className="flex flex-col items-center mb-8">
-            <div className="relative mb-5">
-              <div className="absolute inset-0 bg-sky-500/20 rounded-full blur-2xl" />
+            <div className="mb-5">
               <img
-                src="/logo-sac.png"
-                alt="SAC Ordem de Servico"
-                className="relative w-36 h-36 sm:w-44 sm:h-44 object-contain drop-shadow-[0_0_25px_rgba(14,165,233,0.3)]"
+                src="/Logomarca_FF_Manutencoes_-_1254x1254.png"
+                alt="FF Manutencoes - Ar Condicionado e Maquina de Lavar"
+                className="w-full h-auto object-contain"
+                style={{ maxWidth: '260px' }}
                 loading="eager"
               />
             </div>

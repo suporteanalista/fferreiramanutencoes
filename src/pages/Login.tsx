@@ -29,8 +29,8 @@ export default function Login() {
               <img
                 src="/Logomarca_FF_Manutencoes_-_1254x1254.png"
                 alt="FF Manutencoes - Ar Condicionado e Maquina de Lavar"
-                className="w-full h-auto object-contain mx-auto drop-shadow-[0_4px_24px_rgba(0,0,0,0.35)]"
-                style={{ maxWidth: '260px' }}
+                className="object-contain drop-shadow-[0_4px_24px_rgba(0,0,0,0.35)]"
+                style={{ width: 'auto', height: 'auto', maxWidth: '280px', maxHeight: '180px', display: 'block', margin: 'auto' }}
                 loading="eager"
               />
             </div>

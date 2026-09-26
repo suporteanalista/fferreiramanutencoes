@@ -8,22 +8,9 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['Logomarca_FF_Manutencoes_-_1254x1254.png'],
-      manifest: {
-        name: 'FF Manutencoes',
-        short_name: 'FF Manut.',
-        description: 'FF Manutencoes - Sistema de ordens de servico para ar condicionado e maquina de lavar',
-        theme_color: '#0f172a',
-        background_color: '#0f172a',
-        display: 'standalone',
-        orientation: 'any',
-        start_url: '/',
-        icons: [
-          { src: '/Logomarca_FF_Manutencoes_-_1254x1254.png', sizes: '192x192', type: 'image/png' },
-          { src: '/Logomarca_FF_Manutencoes_-_1254x1254.png', sizes: '512x512', type: 'image/png' },
-          { src: '/Logomarca_FF_Manutencoes_-_1254x1254.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
-        ],
-      },
+      includeAssets: ['Logomarca_FF_Manutencoes_-_1254x1254.png', 'manifest.json', 'icons/*.png'],
+      // Manifest estatico em public/manifest.json (linkado no index.html)
+      manifest: false,
       workbox: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         cleanupOutdatedCaches: true,
